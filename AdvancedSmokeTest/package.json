@@ -1,0 +1,11 @@
+{
+  "name": "AdvancedSmokeTest",
+  "version": "0.0.0",
+  "author": "Eli Weinstock-Herman (Tarwn)",
+  "description": "Sample test project using Phantom to load a page, capture some network statistics, and grab a screenshot",
+  "devDependencies": {
+	"path": "*",
+	"bluebird": "2.9.x",
+	"lodash": "*"
+  }
+}
