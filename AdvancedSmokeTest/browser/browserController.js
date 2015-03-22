@@ -18,7 +18,7 @@ function BrowserController(pageDir, logger){
 		if(knownPages != null)
 			return;
 
-		var totalPath = phantomfs.workingDirectory + self.pageDirectory;
+		var totalPath = phantomfs.workingDirectory + '/' + self.pageDirectory;
 		self.logger.debug('Preloading page definitions from: ' + totalPath);
 		knownPages = [];
 		phantomfs.list(totalPath).forEach(function(file) {
@@ -67,24 +67,25 @@ function BrowserController(pageDir, logger){
 				}
 			}, 15000);
 			
-			
-			self.phantomPage.onError = function(msg, trace){
+			self.isIgnorableError = function(msg){
+				return _.some(self.ignorableErrors, function(ignorableError){
+					return msg.match(ignorableError);
+				});
+			};
 
-				if(self.isIgnoreableError(msg)){
-					self.logger.debug('(Ignored) Browser script error occurred. Message: ' + msgg);
+			self.phantomPage.onError = function(msg, trace){
+				if(self.isIgnorableError(msg)){
+
+					self.logger.debug('(Ignored) Browser script error occurred. Message: ' + msg);
 					return;
 				}
 
 				var traceContent = _.map(trace, function(t){
 					return ' -> ' + t.file + ': ' + t.line + (t.function ? ' (in function "' + t.function +'")' : '');
 				});
-				reject('Browser script error occurred.\nMessage: ' + msg + '\nTrace:\n' + traceContent.join('\n'));
-			};
 
-			self.isIgnorableError = function(msg){
-				return _.some(self.ignorableErrors, function(ignorableError){
-					return msg.match(ignorableError);
-				});
+				self.logger.error('Browser script error occurred.\nMessage: ' + msg + '\nTrace:\n' + traceContent.join('\n'));
+				reject('Browser script error occurred.\nMessage: ' + msg + '\nTrace:\n' + traceContent.join('\n'));
 			};
 
 			// setup to capture when page load finishes
@@ -121,7 +122,11 @@ function BrowserController(pageDir, logger){
 			};
 
 			self.phantomPage.onUrlChanged = function(targetUrl) {
-				console.log('NEW URL: ' + targetUrl);
+				self.logger.debug('NEW URL: ' + targetUrl);
+			};
+
+			self.phantomPage.onConsoleMessage = function (msg, line, source) {
+				self.logger.debug('(client console)> ' + msg);
 			};
 
 			// execute navigation action

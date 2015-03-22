@@ -6,8 +6,8 @@ module.exports = {
 	pattern: /.*/,
 	attachBehavior: function(basicPageObject, phantomPage, loadNewPage){
 
-		basicPageObject.getIsLoggedIn = function(){
-			return pageUtils.getElement(phantomPage, '#snav a:contains("Logout")').getIsVisible();
+		basicPageObject.typeUsername = function(username){
+			pageUtils.getElement(phantomPage, '#txtLogin').type(username);
 		};
 
 		basicPageObject.getIsLoggedOut = function(){

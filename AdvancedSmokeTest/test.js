@@ -1,3 +1,16 @@
+/*
+TODO:
+- Ability to suppress words from output (like passwords)
+- Path for autotext is currently aware of full folder structure
+
+Next up:
+- password entry, button click
+- wait for page redirect
+- verify URL
+
+- How do we do assertions?
+*/
+
 var system = require('system');
 var Promise = require('bluebird');
 var _ = require("lodash");
@@ -5,17 +18,15 @@ var BasicLogger = require('./browser/basicLogger');
 var BrowserController = require('./browser/browserController');
 
 // capture args
-var x = system.args;
-/*
-var config = parseArgs(system.args);
-if(config === undefined || config.isMissingRequiredArg()){
+var config = require('./inputArgs').parse(system.args);
+if(config === undefined || !config.isValid){
 	console.log('Must pass these 3 args when running script:');
 	console.log(' -u [username]');
 	console.log(' -p [password]');
 	console.log(' -n [displayed user\'s name]');
-	return;
+	phantom.exit();
 }
-*/
+
 // setup controller
 var logger = new BasicLogger();
 var controller = new BrowserController('./pages', logger);
@@ -32,8 +43,8 @@ controller.goToUrl('http://lessthandot.com').then(function(pageObject){
 }).then(function(pageObject){
 	
 	console.log('[TEST] Step 2 => We are on page "' + pageObject.getTitle() + '"');
-/*	pageObject.enterUsername(config.username);
-	pageObject.enterPassword(config.username);
+	pageObject.typeUsername(config.username);
+/*	pageObject.enterPassword(config.password);
 	return pageObject.clickLoginButton();
 
 }).then(function(pageObject){
@@ -44,47 +55,16 @@ controller.goToUrl('http://lessthandot.com').then(function(pageObject){
 }).then(function(pageObject){
 	
 	console.log('[TEST] Step 4 => We are on page "' + pageObject.getTitle() + '" and we are ' + (getIsLoggedOut ? 'not ' : '') + 'logged in');
-	controller.phantomPage.render('success.png');
-*/
+*/	controller.phantomPage.render('success.png');
 }).catch(function(err){
-	logger.stdout('[ERROR] unhandled error: ' + err.message + '\nStack Trace:\n' + err.stack);
+	if(err.message){
+		logger.stdout('[ERROR] unhandled error: ' + err.name + ':' + err.message + '\nStack Trace:\n' + err.stack);
+	}
+	else{
+		logger.stdout('[ERROR] unhandled error: ' + err);
+	}
 	controller.phantomPage.render('lasterror.png');
 }).finally(function(){
 	phantom.exit();
 });
 
-
-function parseArgs(args){
-	if(args.h)
-		return;
-
-	var latestArg = null;
-	var parsedConfig = _.reduce(args, function(configs, arg){
-		if(arg[0] === '-' && arg.length > 1){
-			switch(arg.slice(1)){
-				case 'u': 
-					configs.username = null;
-					latestArg = 'username';
-					break;
-				case 'p': 
-					configs.password = null;
-					latestArg = 'password';
-					break;
-				case 'n': 
-					configs.name = null;
-					latestArg = 'name';
-					break;
-			}
-		}
-		else if(latestArg !== null){
-			configs[latestArg] = arg;
-			latestArg = null;
-		}
-	}, {});
-
-	parsedConfig.isMissingRequiredArg = function(){
-		return parsedConfig.username == null || parsedConfig.password == null || parsedConfig.name == null;
-	};
-
-	return parsedConfig;
-}

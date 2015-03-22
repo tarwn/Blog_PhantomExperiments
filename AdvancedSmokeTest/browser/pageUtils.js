@@ -4,14 +4,29 @@ var Promise = require("bluebird");
 module.exports = {
 
 	initializeUtils: function(phantomPage){
-		return new Promise(function(resolve){
+
+		function injectAdditionalScripts(reject){
+			var vers = [];
+			if(!phantomPage.injectJs('./browser/scripts/jquery.autotype.js')){
+				reject('autotype didn\'t load');
+			}
+			else{
+				vers.push('autotype', phantomPage.evaluate(function(){ return $.fn.autotype.defaults.version; }));
+			}
+			return vers;
+		}
+
+		return new Promise(function(resolve, reject){
 			if(phantomPage.evaluate(function(){ return ($ !== undefined) })){
 				var version = phantomPage.evaluate(function(){ return $.fn.jquery; });
-				resolve('JQuery is already present: ' + version);
+				var vers = injectAdditionalScripts(reject);
+				resolve('JQuery is already present: ' + version + ', ' + vers.join(','));
 			}
 			else{
 				phantomPage.includeJs("https://code.jquery.com/jquery-1.11.2.min.js", function() {
-					resolve('JQuery was not present, added 1.11.2');
+					phantomPage.injectJs('scripts/jquery.autotype.js');
+					var vers = injectAdditionalScripts(reject);
+					resolve('JQuery was not present, added 1.11.2, ' + vers.join(','));
 				});
 			}
 		});
@@ -26,6 +41,11 @@ module.exports = {
 			getIsVisible: function(){
 				return phantomPage.evaluate(function(s){
 					return $(s).is(":visible");
+				}, selector); 
+			},
+			getValue: function(){
+				return phantomPage.evaluate(function(s){
+					return $(s).val();
 				}, selector); 
 			},
 
@@ -44,6 +64,11 @@ module.exports = {
 
 					$(s).get(0).dispatchEvent(event);
 				}, selector);
+			},
+			type: function(text){
+				phantomPage.evaluate(function(s, t){
+					$(s).autotype(t);
+				}, selector, text);
 			}
 		};
 	},
