@@ -42,24 +42,20 @@ controller.ignorableErrors.push(/ytimg/);
 // run test
 controller.goToUrl('http://lessthandot.com').then(function(pageObject){
 	logger.stdout('Step 1', ' => Loaded Site: We are on page "' + pageObject.getTitle() + '" and we are ' + (pageObject.getIsLoggedOut() ? 'not ' : '') + 'logged in');
-	controller.phantomPage.render('done1.png');
 
 	return pageObject.pressLogin();
 }).then(function(pageObject){
 	logger.stdout('Step 2', ' => Navigate to Login Page: We are on page "' + pageObject.getTitle() + '"');
-	controller.phantomPage.render('done2.png');
 
 	pageObject.typeUsername(config.username);
 	pageObject.typePassword(config.password);
 	return pageObject.clickLoginButton();
 }).then(function(pageObject){
 	logger.stdout('Step 3', ' => Login: We are on page "' + pageObject.getTitle() + '" and we ' + (pageObject.getIsLoggedOut() ? 'failed the login' : 'logged in successfully'));
-	controller.phantomPage.render('done3.png');
 
 	return pageObject.waitForRedirectTo('http://lessthandot.com');
 }).then(function(pageObject){
 	logger.stdout('Step 4', ' => Redirected Back: We are on page "' + pageObject.getTitle() + '" and we are ' + (pageObject.getIsLoggedOut() ? 'not ' : '') + 'logged in');
-	controller.phantomPage.render('done4.png');
 
 	controller.phantomPage.render('success.png');
 }).catch(function(err){
