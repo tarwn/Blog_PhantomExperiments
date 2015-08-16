@@ -9,7 +9,7 @@ function BasicPage(page, logger){
 	self.setLoaded = function(status){
 		var loadSpeed = Date.now() - self.startLoadTime;
 		isLoaded = true;
-		logger.debug('Page loaded in ' + loadSpeed + 'ms :: ' + self.getUrl());
+		logger.debug(1, 'setLoaded', 'Page loaded in ' + loadSpeed + 'ms :: ' + self.getUrl());
 	};
 
 	self.getTitle = function(){ return self.page.title; };

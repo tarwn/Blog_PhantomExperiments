@@ -19,20 +19,20 @@ function BrowserController(pageDir, logger){
 			return;
 
 		var totalPath = phantomfs.workingDirectory + '/' + self.pageDirectory;
-		self.logger.debug('Preloading page definitions from: ' + totalPath);
+		self.logger.debug(2,'preloadPages','Preloading page definitions from: ' + totalPath);
 		knownPages = [];
 		phantomfs.list(totalPath).forEach(function(file) {
 			if(file != "." && file != ".."){
-				self.logger.debug(' - adding ' + file);
+				self.logger.debug(2,'preloadPages',' - adding ' + file);
 				var page = require(totalPath  + "/" + file);
 				knownPages.push(page);
 			}
 		});
-		self.logger.debug('Page definitions loaded');
+		self.logger.debug(2,'preloadPages','Page definitions loaded');
 	};
 
 	self.goToUrl = function(url){
-		self.logger.debug('goToUrl: ' + url);
+		self.logger.debug(1,'goToUrl', url);
 
 		return self.loadNewPage(function(){
 			self.phantomPage.open(url);
@@ -43,21 +43,23 @@ function BrowserController(pageDir, logger){
 		return new Promise(function(resolve, reject){
 			self.preloadPagesDefinitions();
 
+			var newUrlCalledYet = false;
+
 			// setup to capture error conditions
 			self.phantomPage.onResourceTimeout = function(request) {
-				self.logger.debug('Response (#' + request.id + '): ' + JSON.stringify(request));
+				self.logger.debug(2, 'onResourceTimeout', 'Response (#' + request.id + '): ' + JSON.stringify(request));
 				reject('Page timed out');
 			};
 
 			self.phantomPage.onResourceError = function(resourceError) {
 				if(self.isIgnorableError(resourceError.url)){
-					self.logger.debug('(Ignored) Resource Error: Unable to load resource (#' + resourceError.id + 'URL:' + resourceError.url + ')');
-					self.logger.debug('(Ignored) Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
+					self.logger.debug(3, 'onResourceError', '(Ignored) Resource Error: Unable to load resource (#' + resourceError.id + 'URL:' + resourceError.url + ')');
+					self.logger.debug(3, 'onResourceError', '(Ignored) Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
 					return;
 				}
 
-				self.logger.debug('Unable to load resource (#' + resourceError.id + 'URL:' + resourceError.url + ')');
-				self.logger.debug('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
+				self.logger.debug(0, 'onResourceError', 'Unable to load resource (#' + resourceError.id + 'URL:' + resourceError.url + ')');
+				self.logger.debug(0, 'onResourceError', 'Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
 				reject('Page load error');
 			};
 	
@@ -76,7 +78,7 @@ function BrowserController(pageDir, logger){
 			self.phantomPage.onError = function(msg, trace){
 				if(self.isIgnorableError(msg)){
 
-					self.logger.debug('(Ignored) Browser script error occurred. Message: ' + msg);
+					self.logger.debug(3, 'onError', '(Ignored) Browser script error occurred. Message: ' + msg);
 					return;
 				}
 
@@ -84,26 +86,33 @@ function BrowserController(pageDir, logger){
 					return ' -> ' + t.file + ': ' + t.line + (t.function ? ' (in function "' + t.function +'")' : '');
 				});
 
-				self.logger.error('Browser script error occurred.\nMessage: ' + msg + '\nTrace:\n' + traceContent.join('\n'));
+				self.logger.error('onError', 'Browser script error occurred.\nMessage: ' + msg + '\nTrace:\n' + traceContent.join('\n'));
 				reject('Browser script error occurred.\nMessage: ' + msg + '\nTrace:\n' + traceContent.join('\n'));
 			};
 
 			// setup to capture when page load finishes
 			self.phantomPage.onLoadFinished = function(status){
-				try{
-					self.logger.debug('Page "' + self.phantomPage.url + '" loaded with status ' + status);
-					self.logger.debug('Actual URL: ' + pageUtils.getUrl(self.phantomPage));
-					currentPage.setLoaded(status);
-
-					//if(status !== "success"){
-					//	reject("Return status was '" + status + "'");
-					//}
-
-					if(status === "success")
-						resolve(currentPage);
+				if(!newUrlCalledYet)
+				{
+					self.logger.debug(3, 'onLoadFinished', '(Ignored) onLoadFinished: URL did not change - Page "' + self.phantomPage.url + '" loaded with status ' + status);
 				}
-				catch(err){
-					reject(err);
+				else
+				{
+					try{
+						self.logger.debug(1, 'onLoadFinished', 'Page "' + self.phantomPage.url + '" loaded with status ' + status);
+						self.logger.debug(2, 'onLoadFinished', 'Actual URL: ' + pageUtils.getUrl(self.phantomPage));
+						currentPage.setLoaded(status);
+
+						//if(status !== "success"){
+						//	reject("Return status was '" + status + "'");
+						//}
+
+						if(status === "success")
+							resolve(currentPage);
+					}
+					catch(err){
+						reject(err);
+					}
 				}
 			};
 
@@ -122,26 +131,27 @@ function BrowserController(pageDir, logger){
 			};
 
 			self.phantomPage.onUrlChanged = function(targetUrl) {
-				self.logger.debug('NEW URL: ' + targetUrl);
+				self.logger.debug(1, 'onUrlChanged', 'Going to ' + targetUrl);
+				newUrlCalledYet = true;
 			};
 
 			self.phantomPage.onConsoleMessage = function (msg, line, source) {
-				self.logger.debug('(client console)> ' + msg);
+				self.logger.debug(2, 'onConsoleMessage', '> ' + msg);
 			};
 
 			// execute navigation action
 			var currentPage = new BasicPage(self.phantomPage, logger);
 			//self.logger.debug("Stopping previous load?");
 			//self.phantomPage.stop();
-			self.logger.debug("Starting navigation action");
+			self.logger.debug(2, 'loadNewPage', 'Starting navigation action');
 			navigationAction();
 
 		}).then(function(currentPage){
 			// attach pageutils
-			self.logger.debug('Attaching page utilities (for instrumenting browser via jQuery)');
+			self.logger.debug(2, 'loadNewPage', 'Attaching page utilities (for instrumenting browser via jQuery)');
 
 			return pageUtils.initializeUtils(self.phantomPage).then(function(feedback){
-				self.logger.debug('Initialize page utils: ' + feedback);
+				self.logger.debug(2, 'loadNewPage', 'Initialize page utils: ' + feedback);
 				return currentPage;
 			});
 
@@ -150,7 +160,7 @@ function BrowserController(pageDir, logger){
 			var url = self.phantomPage.url;
 			_.forEach(knownPages, function(knownPage){
 				if(url.match(knownPage.pattern)){
-					self.logger.debug(' - attaching ' + knownPage.name + ': ' + knownPage.description);
+					self.logger.debug(2, 'loadNewPage', ' - attaching ' + knownPage.name + ': ' + knownPage.description);
 					knownPage.attachBehavior(currentPage, self.phantomPage, self.loadNewPage);
 				}
 			});
@@ -158,7 +168,7 @@ function BrowserController(pageDir, logger){
 			return currentPage;
 		}).then(function(currentPage){
 			// based on the URL, attach appropriate page behavior for this URL
-			self.logger.debug('Adding page-specific behavior');
+			self.logger.debug(2, 'loadNewPage', 'Adding page-specific behavior');
 
 			return currentPage;
 		});

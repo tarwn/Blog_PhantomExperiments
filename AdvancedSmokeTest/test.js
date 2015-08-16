@@ -28,40 +28,46 @@ if(config === undefined || !config.isValid){
 }
 
 // setup controller
-var logger = new BasicLogger();
+var logger = new BasicLogger(1);
 var controller = new BrowserController('./pages', logger);
+
+// add in list of browser errors we can safely ignore
 controller.ignorableErrors.push(/www\.google\.com\/pagead/);
+controller.ignorableErrors.push(/www\.google\.com/);
+controller.ignorableErrors.push(/\.gstatic\.com/);
 controller.ignorableErrors.push(/pagead2.googlesyndication.com/);
 controller.ignorableErrors.push(/googleads.g.doubleclick.net/);
+controller.ignorableErrors.push(/ytimg/);
 
 // run test
 controller.goToUrl('http://lessthandot.com').then(function(pageObject){
+	logger.stdout('Step 1', ' => Loaded Site: We are on page "' + pageObject.getTitle() + '" and we are ' + (pageObject.getIsLoggedOut() ? 'not ' : '') + 'logged in');
+	controller.phantomPage.render('done1.png');
 
-	console.log('[TEST] Step 1 => We are on page "' + pageObject.getTitle() + '" and we are ' + (pageObject.getIsLoggedOut() ? 'not ' : '') + 'logged in');
 	return pageObject.pressLogin();
-
 }).then(function(pageObject){
-	
-	console.log('[TEST] Step 2 => We are on page "' + pageObject.getTitle() + '"');
+	logger.stdout('Step 2', ' => Navigate to Login Page: We are on page "' + pageObject.getTitle() + '"');
+	controller.phantomPage.render('done2.png');
+
 	pageObject.typeUsername(config.username);
-/*	pageObject.enterPassword(config.password);
+	pageObject.typePassword(config.password);
 	return pageObject.clickLoginButton();
-
 }).then(function(pageObject){
-	
-	console.log('[TEST] Step 3 => We are on page "' + pageObject.getTitle() + '" and we ' + (getIsLoggedOut ? 'failed the login' : 'logged in successfully'));
+	logger.stdout('Step 3', ' => Login: We are on page "' + pageObject.getTitle() + '" and we ' + (pageObject.getIsLoggedOut() ? 'failed the login' : 'logged in successfully'));
+	controller.phantomPage.render('done3.png');
+
 	return pageObject.waitForRedirectTo('http://lessthandot.com');
-
 }).then(function(pageObject){
-	
-	console.log('[TEST] Step 4 => We are on page "' + pageObject.getTitle() + '" and we are ' + (getIsLoggedOut ? 'not ' : '') + 'logged in');
-*/	controller.phantomPage.render('success.png');
+	logger.stdout('Step 4', ' => Redirected Back: We are on page "' + pageObject.getTitle() + '" and we are ' + (pageObject.getIsLoggedOut() ? 'not ' : '') + 'logged in');
+	controller.phantomPage.render('done4.png');
+
+	controller.phantomPage.render('success.png');
 }).catch(function(err){
 	if(err.message){
-		logger.stdout('[ERROR] unhandled error: ' + err.name + ':' + err.message + '\nStack Trace:\n' + err.stack);
+		logger.error('Test', 'unhandled error: ' + err.name + ':' + err.message + '\nStack Trace:\n' + err.stack);
 	}
 	else{
-		logger.stdout('[ERROR] unhandled error: ' + err);
+		logger.error('Test', 'unhandled error: ' + err);
 	}
 	controller.phantomPage.render('lasterror.png');
 }).finally(function(){

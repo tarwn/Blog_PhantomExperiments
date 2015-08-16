@@ -62,6 +62,9 @@ module.exports = {
 						0 /*left*/, null
 					);
 
+					console.log('click on ' + s);
+					console.log($(s).length + ' elements found');
+
 					$(s).get(0).dispatchEvent(event);
 				}, selector);
 			},
