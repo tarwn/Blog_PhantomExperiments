@@ -2,12 +2,7 @@
 TODO:
 - Ability to suppress words from output (like passwords)
 - Path for autotext is currently aware of full folder structure
-
-Next up:
-- password entry, button click
-- wait for page redirect
 - verify URL
-
 - How do we do assertions?
 */
 
