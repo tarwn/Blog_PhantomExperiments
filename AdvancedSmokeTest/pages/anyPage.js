@@ -7,7 +7,7 @@ module.exports = {
 	attachBehavior: function(basicPageObject, phantomPage, loadNewPage){
 
 		basicPageObject.getIsLoggedIn = function(){
-			return pageUtils.getElement(phantomPage, '#snav a:contains("Logout")').getIsVisible();
+			return pageUtils.getElement(phantomPage, '#snav a:contains("logout")').getIsVisible();
 		};
 
 		basicPageObject.getIsLoggedOut = function(){

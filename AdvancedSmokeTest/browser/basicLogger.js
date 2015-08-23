@@ -29,7 +29,7 @@ function BasicLogger(debugLevelFilter){
 	};
 
 	this.stdout = function(category, arg){
-			console.log('[OUT]', pad(category), arg);
+			console.log('[OUT] ' + pad(category) + arg);
 	};
 
 	this.error = function(category, arg){

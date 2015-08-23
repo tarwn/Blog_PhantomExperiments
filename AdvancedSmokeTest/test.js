@@ -2,13 +2,15 @@
 TODO:
 - Ability to suppress words from output (like passwords)
 - Path for autotext is currently aware of full folder structure
-- verify URL
-- How do we do assertions?
+- track download size/client page
 */
 
 var system = require('system');
 var Promise = require('bluebird');
 var _ = require("lodash");
+var chai = require("chai");
+var assert = chai.assert;
+
 var BasicLogger = require('./browser/basicLogger');
 var BrowserController = require('./browser/browserController');
 
@@ -24,7 +26,7 @@ if(config === undefined || !config.isValid){
 
 // setup controller
 var logger = new BasicLogger(1);
-var controller = new BrowserController('./pages', logger);
+var controller = new BrowserController('./pages', './browser', logger);
 
 // add in list of browser errors we can safely ignore
 controller.ignorableErrors.push(/www\.google\.com\/pagead/);
@@ -35,26 +37,55 @@ controller.ignorableErrors.push(/googleads.g.doubleclick.net/);
 controller.ignorableErrors.push(/ytimg/);
 
 // run test
-controller.goToUrl('http://lessthandot.com').then(function(pageObject){
-	logger.stdout('Step 1', ' => Loaded Site: We are on page "' + pageObject.getTitle() + '" and we are ' + (pageObject.getIsLoggedOut() ? 'not ' : '') + 'logged in');
+Promise.resolve().then(function(){
 
-	return pageObject.pressLogin();
+	logger.stdout('Step 1', 'Load the site, we won\'t be logged in');
+	return controller.goToUrl('http://lessthandot.com');
+
 }).then(function(pageObject){
-	logger.stdout('Step 2', ' => Navigate to Login Page: We are on page "' + pageObject.getTitle() + '"');
+	assert.equal(pageObject.getUrl(), 'http://lessthandot.com/');
+	assert.equal(pageObject.getTitle(), 'Less Than Dot - Launchpad - Less Than Dot');
+	assert.ok(pageObject.getIsLoggedOut(), 'Logged out on initial visit');
 
+	logger.stdout('Step 2', 'Navigate to Login Page from menu');
+	return pageObject.pressLogin();
+
+}).then(function(pageObject){
+	assert.equal(pageObject.getUrl(), 'http://lessthandot.com/login.php?backtrack=http://lessthandot.com/index.php?');
+	assert.equal(pageObject.getTitle(), 'Less Than Dot - Launchpad - Less Than Dot - Login');
+
+	logger.stdout('Step 3', 'Perform login');
 	pageObject.typeUsername(config.username);
 	pageObject.typePassword(config.password);
 	return pageObject.clickLoginButton();
 }).then(function(pageObject){
-	logger.stdout('Step 3', ' => Login: We are on page "' + pageObject.getTitle() + '" and we ' + (pageObject.getIsLoggedOut() ? 'failed the login' : 'logged in successfully'));
+	assert.equal(pageObject.getUrl(), 'http://lessthandot.com/login.php?backtrack=http://lessthandot.com/index.php?');
+	assert.ok(pageObject.getIsLoggedIn(), 'Logged in now');
 
+	logger.stdout('Step 4', 'Wait for automatic redirect');
 	return pageObject.waitForRedirectTo('http://lessthandot.com');
 }).then(function(pageObject){
-	logger.stdout('Step 4', ' => Redirected Back: We are on page "' + pageObject.getTitle() + '" and we are ' + (pageObject.getIsLoggedOut() ? 'not ' : '') + 'logged in');
+	assert.equal(pageObject.getUrl(), 'http://lessthandot.com/index.php?');
+	assert.equal(pageObject.getTitle(), 'Less Than Dot - Launchpad - Less Than Dot');
 
+	logger.stdout('Success', 'We have logged in successfully.');
 	controller.phantomPage.render('success.png');
+
+	console.log("Resources downloaded: " + _.keys(pageObject.resources).length);
+	var resources = _.reduce(pageObject.resources, function(result, n, key){
+		return result + '{ key:"' + key + '", time: "' + (n.endTime - n.startTime) + 'ms" }\n';
+	});
+	console.log(resources);
+
+//}).catch(AssertionError, function(err){
+//	logger.error('FAIL', 'Assertion Failed: ' + err.message);
+//	controller.phantomPage.render('lasterror.png');
 }).catch(function(err){
-	if(err.message){
+console.log(err.prototype);
+	if(err.name == 'AssertionError'){
+		logger.error('ASSERT FAIL', err.message);
+	}
+	else if(err.message){
 		logger.error('Test', 'unhandled error: ' + err.name + ':' + err.message + '\nStack Trace:\n' + err.stack);
 	}
 	else{

@@ -1,3 +1,5 @@
+var Resource = require('./resource');
+
 function BasicPage(page, logger){
 	var self = this;
 
@@ -5,11 +7,21 @@ function BasicPage(page, logger){
 	self.logger = logger;
 	self.isLoaded = false;
 	self.startLoadTime = Date.now();
+	self.resources = {};
 
 	self.setLoaded = function(status){
 		var loadSpeed = Date.now() - self.startLoadTime;
 		isLoaded = true;
 		logger.debug(1, 'setLoaded', 'Page loaded in ' + loadSpeed + 'ms :: ' + self.getUrl());
+	};
+
+	self.addResource = function(downloadedResource){
+		if(self.resources[downloadedResource.id] != null){
+			self.resources[downloadedResource.id].add(downloadedResource);
+		}
+		else{
+			self.resources[downloadedResource.id] = downloadedResource;
+		}
 	};
 
 	self.getTitle = function(){ return self.page.title; };

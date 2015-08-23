@@ -6,6 +6,7 @@
   "devDependencies": {
 	"path": "*",
 	"bluebird": "2.9.x",
-	"lodash": "*"
+	"lodash": "*",
+	"chai": "*"
   }
 }

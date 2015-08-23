@@ -2,11 +2,12 @@ var Promise = require('bluebird');
 var phantomfs = require("fs");
 var BasicPage = require('./basicPage');
 var pageUtils = require('./pageUtils');
+var Resource = require('./resource');
 
 // pre-load all page definitions in pages subfolder
 var knownPages;
 
-function BrowserController(pageDir, logger){
+function BrowserController(pageDir, browserControllerDir, logger){
 	var self = this;
 
 	self.phantomPage = require('webpage').create();
@@ -122,12 +123,14 @@ function BrowserController(pageDir, logger){
 			};
 
 			self.phantomPage.onResourceReceived = function(response) {
-				if (response.stage !== "end") return;
+				//if (response.stage !== "end") return;
 				//console.log('RESPONSE (#' + response.id + ', stage "' + response.stage + '"): ' + response.url);
+				currentPage.addResource(new Resource({ id: response.id, endTime: Date.now(), size: 0, status: response.status, size: response.bodySize }));
 			};
 
 			self.phantomPage.onResourceRequested = function(requestData, networkRequest) {
 				//console.log('REQUEST (#' + requestData.id + '): ' + requestData.url);
+				currentPage.addResource(new Resource({ id: requestData.id, startTime: Date.now(), endTime: Date.now(), size: 0 }));
 			};
 
 			self.phantomPage.onUrlChanged = function(targetUrl) {
@@ -150,7 +153,7 @@ function BrowserController(pageDir, logger){
 			// attach pageutils
 			self.logger.debug(2, 'loadNewPage', 'Attaching page utilities (for instrumenting browser via jQuery)');
 
-			return pageUtils.initializeUtils(self.phantomPage).then(function(feedback){
+			return pageUtils.initializeUtils(self.phantomPage, browserControllerDir).then(function(feedback){
 				self.logger.debug(2, 'loadNewPage', 'Initialize page utils: ' + feedback);
 				return currentPage;
 			});

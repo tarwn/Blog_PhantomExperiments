@@ -3,11 +3,11 @@ var Promise = require("bluebird");
 
 module.exports = {
 
-	initializeUtils: function(phantomPage){
+	initializeUtils: function(phantomPage, browserControllerDir){
 
 		function injectAdditionalScripts(reject){
 			var vers = [];
-			if(!phantomPage.injectJs('./browser/scripts/jquery.autotype.js')){
+			if(!phantomPage.injectJs(browserControllerDir + '/scripts/jquery.autotype.js')){
 				reject('autotype didn\'t load');
 			}
 			else{
